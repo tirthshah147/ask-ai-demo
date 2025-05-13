@@ -15,10 +15,29 @@ datasource db {
 }
 
 model Post {
-    id        Int      @id @default(autoincrement())
-    name      String
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String   @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-    @@index([name])
+  embeddings  PostEmbedding[]
+
 }
+
+model PostEmbedding {
+  id          Int         @id @default(autoincrement())
+  postId      Int
+  chunkIndex  Int
+  content     String      @db.Text
+  embedding   Unsupported("vector(1536)")         // PlanetScale VECTOR
+  createdAt   DateTime    @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+}
+
+// ALTER TABLE PostEmbedding
+//   ADD VECTOR INDEX embedding_index (embedding)
+//   SECONDARY_ENGINE_ATTRIBUTE='{"distance":"cosine"}';
