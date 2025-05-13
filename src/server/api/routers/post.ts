@@ -12,6 +12,33 @@ function toUnit(v: number[]) {
   return v.map((x) => x / norm);
 }
 
+/* ── utils/snippet.ts ────────────────────────────────────────── */
+/** Make a 1‑or‑2‑line snippet around the *first* match and mark it. */
+export function makeSnippet(text: string, q: string) {
+  const words = q
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+
+  if (!words.length) return "";
+
+  // 1️⃣ find first line containing any search word
+  const lines = text.split(/\r?\n/);
+  const re = new RegExp(`(${words.join("|")})`, "i");
+  const idx = lines.findIndex((ln) => re.test(ln));
+
+  if (idx === -1) return ""; // nothing matched (shouldn't happen if MATCH found it)
+
+  // 2️⃣ take that line + the one after it (if present)
+  const slice = lines.slice(idx, idx + 2).join(" ");
+
+  // 3️⃣ highlight *all* occurrences inside the slice
+  const markRe = new RegExp(`(${words.join("|")})`, "gi");
+  return slice.replace(markRe, "<mark>$1</mark>");
+}
+/* ────────────────────────────────────────────────────────────── */
+
 export const postRouter = createTRPCRouter({
   hello: publicProcedure
     .input(z.object({ text: z.string() }))
@@ -143,5 +170,33 @@ Keep the tone warm, empathetic, and conversational—like a caring support team 
       return {
         answer,
       };
+    }),
+
+  /* ── full‑text search ─────────────────────────────────── */
+  search: publicProcedure
+    .input(z.object({ q: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const q = input.q.trim();
+      if (!q) return []; // nothing to search yet
+
+      const posts = await ctx.db.post.findMany({
+        where: {
+          OR: [{ title: { search: q } }, { description: { search: q } }],
+        },
+        orderBy: {
+          _relevance: {
+            fields: ["title", "description"],
+            search: q,
+            sort: "desc",
+          },
+        },
+        select: { id: true, title: true, description: true },
+      });
+
+      return posts.map((p) => ({
+        id: p.id,
+        title: p.title,
+        descriptionHighlighted: makeSnippet(p.description, q),
+      }));
     }),
 });

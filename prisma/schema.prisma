@@ -22,7 +22,6 @@ model Post {
   updatedAt   DateTime @updatedAt
 
   embeddings  PostEmbedding[]
-
 }
 
 model PostEmbedding {
@@ -41,3 +40,7 @@ model PostEmbedding {
 // ALTER TABLE PostEmbedding
 //   ADD VECTOR INDEX embedding_index (embedding)
 //   SECONDARY_ENGINE_ATTRIBUTE='{"distance":"cosine"}';
+
+
+// ALTER TABLE `Post`
+// ADD FULLTEXT INDEX `Post_title_description_idx` (`title`, `description`);

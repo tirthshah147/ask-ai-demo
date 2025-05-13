@@ -19,7 +19,7 @@ export function LatestPost() {
   });
 
   return (
-    <div className="w-full max-w-xs">
+    <div className="w-full max-w-lg">
       {latestPost ? (
         <p className="truncate">Your most recent post: {latestPost.title}</p>
       ) : (
@@ -37,7 +37,7 @@ export function LatestPost() {
           placeholder="Title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="w-full rounded-full bg-white/10 px-4 py-2 text-white"
+          className="w-full rounded-md bg-white/10 px-4 py-2 text-white"
         />
         <textarea
           placeholder="Description"
@@ -48,7 +48,7 @@ export function LatestPost() {
         />
         <button
           type="submit"
-          className="rounded-full bg-white/10 px-10 py-3 font-semibold transition hover:bg-white/20"
+          className="cursor-pointer rounded-full bg-white/10 px-10 py-3 font-semibold transition hover:bg-white/20"
           disabled={createPost.isPending}
         >
           {createPost.isPending ? "Submitting..." : "Submit"}
