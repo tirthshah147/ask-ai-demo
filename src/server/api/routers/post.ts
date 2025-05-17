@@ -12,6 +12,12 @@ function toUnit(v: number[]) {
   return v.map((x) => x / norm);
 }
 
+/* helper: tiny uid -> URL mapper (you can replace with real links) */
+const toUrl = (tag: string) => {
+  const [pid, chunk] = tag.split("-");
+  return `/posts/${pid}#c${chunk}`;
+};
+
 /* ── utils/snippet.ts ────────────────────────────────────────── */
 /** Make a 1‑or‑2‑line snippet around the *first* match and mark it. */
 export function makeSnippet(text: string, q: string) {
@@ -120,9 +126,12 @@ export const postRouter = createTRPCRouter({
       // const qVecUnit = JSON.stringify(toUnit(embedding));
       const qVec = JSON.stringify(toUnit(embedding));
 
-      const snippets: { content: string }[] = await ctx.db.$queryRawUnsafe(
-        `
-          SELECT  content
+      const rows: { postId: number; chunkIndex: number; content: string }[] =
+        await ctx.db.$queryRawUnsafe(
+          `
+          SELECT  postId,
+                chunkIndex,
+                content
           FROM    PostEmbedding
           ORDER BY DISTANCE(  
           TO_VECTOR(?),              
@@ -131,10 +140,16 @@ export const postRouter = createTRPCRouter({
           )
   LIMIT 5;
   `,
-        qVec,
-      );
+          qVec,
+        );
 
-      const context = snippets.map((s) => s.content).join("\n---\n");
+      /* tag each snippet */
+      const context = rows
+        .map(
+          (r) =>
+            `[${r.postId}-${r.chunkIndex}] ${r.content.trim().replace(/\s+/g, " ")}`,
+        )
+        .join("\n---\n");
 
       console.log("Question: ", input.question);
       console.log("Context: ", context);
@@ -152,7 +167,8 @@ Return the response in well-structured, semantic HTML with proper formatting:
 - Use headings like <h1>, <h2>, and <h3> for clarity and structure  
 - Use <ul> and <li> for bullet points where appropriate  
 - Insert <br> tags for clear line breaks and spacing. 
-- Highlight important words using <strong> (bold), <em> (italic), and <u> (underline) wherever it improves readability or emphasis  
+- Highlight important words using <strong> (bold), <em> (italic), and <u> (underline) wherever it improves readability or emphasis
+-  Whenever you use a fact, leave its tag (e.g. [42-7]) in place.  
 
 Keep the tone warm, empathetic, and conversational—like a caring support team would.`,
           },
@@ -163,13 +179,20 @@ Keep the tone warm, empathetic, and conversational—like a caring support team 
         ],
       });
 
-      const answer =
+      const html =
         chat.choices[0]?.message?.content?.trim() ??
         "⚠️  Model returned no answer.";
 
-      return {
-        answer,
-      };
+      /* 4️⃣ collect unique tags present in the answer */
+      const tags = Array.from(html.matchAll(/\[(\d+-\d+)]/g)).map((m) => m[1]!);
+      const sources = [...new Set(tags)].map((t) => ({
+        tag: t,
+        url: toUrl(t),
+      }));
+
+      console.log("sources", sources);
+
+      return { answer: html, sources };
     }),
 
   /* ── full‑text search ─────────────────────────────────── */

@@ -6,10 +6,18 @@ import { api } from "~/trpc/react"; // ← tRPC hook generator
 export function AskAI() {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<string | null>(null);
+  const [sources, setSources] = useState<{ tag: string; url: string }[]>([]);
 
   // tRPC mutation
   const askPost = api.post.askPost.useMutation({
-    onSuccess: (data) => setAnswer(data.answer),
+    onSuccess: (data) => {
+      setAnswer(data.answer);
+      setSources(data.sources); // [{ tag:"12-3", url:"/posts/12#c3" }, …]
+    },
+    onMutate: () => {
+      setAnswer(`🤖 Thinking…`);
+      setSources([]);
+    },
   });
 
   const submit = (e: React.FormEvent) => {
@@ -44,6 +52,19 @@ export function AskAI() {
           className="prose prose-invert rounded-md bg-black/20 p-4 text-amber-300"
           dangerouslySetInnerHTML={{ __html: answer }}
         />
+      )}
+
+      {/* source list */}
+      {sources.length > 0 && (
+        <ul className="mt-2 space-y-1 text-sm text-cyan-300">
+          {sources.map((s) => (
+            <li key={s.tag}>
+              <a href={s.url} target="_blank" className="underline">
+                source {s.tag}
+              </a>
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   );
