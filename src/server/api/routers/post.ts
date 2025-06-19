@@ -1,11 +1,15 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-
+import { Pinecone } from "@pinecone-database/pinecone";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import OpenAI from "openai";
 import type { Post, Prisma } from "@prisma/client";
+import type { RecordMetadata } from "@pinecone-database/pinecone";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const pc = new Pinecone({ apiKey: process.env.PINECONE_API_KEY ?? "" });
+
+const index = pc.index("test-pinecone-on-posts");
 
 function toUnit(v: number[]) {
   const norm = Math.hypot(...v);
@@ -65,8 +69,8 @@ export const postRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }): Promise<Post> => {
       /* 📌 1. split + embed (no DB, no Tx yet) */
       const splitter = new RecursiveCharacterTextSplitter({
-        chunkSize: 400,
-        chunkOverlap: 80,
+        chunkSize: 2000,
+        chunkOverlap: 50,
       });
       const chunks = await splitter.splitText(
         `${input.title}\n\n${input.description}`,
@@ -97,6 +101,18 @@ export const postRouter = createTRPCRouter({
            VALUES ${placeholders}`,
           ...rows.flat(),
         );
+
+        const vectors = data.map((e, i) => ({
+          id: `${post.id}-${i}`,
+          values: toUnit(e.embedding),
+          metadata: {
+            postId: post.id,
+            chunkIndex: i,
+            content: chunks[i] ?? "", // string – never undefined ✅
+          } satisfies RecordMetadata, // ⬅️ compile-time guarantee
+        }));
+
+        await index.upsert(vectors);
 
         return post;
       });

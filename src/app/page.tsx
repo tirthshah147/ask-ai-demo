@@ -16,7 +16,7 @@ export default async function Home() {
             Second <span className="text-[hsl(280,100%,70%)]">Brain</span> App
           </h1>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-8">
-            <Link
+            {/* <Link
               className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 hover:bg-white/20"
               href="https://create.t3.gg/en/usage/first-steps"
               target="_blank"
@@ -26,8 +26,8 @@ export default async function Home() {
                 Get instant answers pulled from your own posts—no need to leave
                 the page.
               </div>
-            </Link>
-            <Link
+            </Link> */}
+            {/* <Link
               className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 hover:bg-white/20"
               href="https://create.t3.gg/en/introduction"
               target="_blank"
@@ -37,14 +37,14 @@ export default async function Home() {
                 Quickly locate any post that contains your text — titles and
                 snippets highlighted.
               </div>
-            </Link>
+            </Link> */}
           </div>
           <div className="flex flex-col items-center gap-2">
             <p className="text-2xl text-white">{`Hola! Let's create some posts 😀`}</p>
           </div>
 
           <LatestPost />
-          <SearchPost />
+          {/* <SearchPost /> */}
           <AskAI />
           <div className="mb-[100px]"></div>
         </div>
